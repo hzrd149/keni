@@ -498,6 +498,10 @@
     "step3Desc": "Keni 的工具將自動出現。詢問您的 AI 助理列出支出、新增交易或查看預算。"
   },
   "oauth": {
+    "unknownClient": "某個應用程式",
+    "greeting": "嗨，{{name}}",
+    "requesting": "<b>{{client}}</b> 正在請求存取您的 Keni 帳號。",
+    "deniedDesc": "您已拒絕 <b>{{client}}</b> 的存取。您可以關閉此視窗。",
     "loading": "載入中…",
     "errorTitle": "無效的請求",
     "errorDesc": "此授權連結無效或已過期。",

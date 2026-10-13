@@ -498,6 +498,10 @@
     "step3Desc": "Keni's tools will appear automatically. Ask your AI assistant to list expenses, add transactions, or check budgets."
   },
   "oauth": {
+    "unknownClient": "An application",
+    "greeting": "Hi, {{name}}",
+    "requesting": "<b>{{client}}</b> is requesting access to your Keni account.",
+    "deniedDesc": "You denied access to <b>{{client}}</b>. You can close this window.",
     "loading": "Loading…",
     "errorTitle": "Invalid request",
     "errorDesc": "This authorization link is invalid or has expired.",

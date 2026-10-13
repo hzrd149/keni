@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
 import { users } from '../lib/api';
 import type { UserResponse } from '../lib/types';
@@ -18,7 +18,7 @@ export function OAuthAuthorizePage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const state = searchParams.get('state') ?? '';
-  const clientName = searchParams.get('client_name') ?? 'An application';
+  const clientName = searchParams.get('client_name') ?? t('oauth.unknownClient');
   const scopesRaw = searchParams.get('scopes') ?? 'user';
 
   const [mode, setMode] = useState<Mode>('loading');
@@ -100,8 +100,10 @@ export function OAuthAuthorizePage() {
   };
   const scopes = scopesRaw.split(' ').filter(Boolean);
 
+  const clientStrong = <strong style={{ color: 'var(--ink)', fontWeight: 600 }} />;
+
   const requesting = (
-    <><strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{clientName}</strong> is requesting access to your Keni account.</>
+    <Trans i18nKey="oauth.requesting" values={{ client: clientName }} components={{ b: clientStrong }} />
   );
 
   const permissions = (
@@ -142,7 +144,7 @@ export function OAuthAuthorizePage() {
         <AuthHeader
           clientName={clientName}
           title={t('oauth.deniedTitle')}
-          subtitle={<>You denied access to <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{clientName}</strong>. You can close this window.</>}
+          subtitle={<Trans i18nKey="oauth.deniedDesc" values={{ client: clientName }} components={{ b: clientStrong }} />}
         />
       )}
 
@@ -150,7 +152,7 @@ export function OAuthAuthorizePage() {
         <>
           <AuthHeader
             clientName={clientName}
-            title={<>Hi, {currentUser.display_name ?? currentUser.username}</>}
+            title={t('oauth.greeting', { name: currentUser.display_name ?? currentUser.username })}
             subtitle={requesting}
           />
 
