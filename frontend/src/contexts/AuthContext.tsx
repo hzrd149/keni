@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { auth, users } from '../lib/api';
 import type { UserResponse } from '../lib/types';
-import i18n from '../lib/i18n';
+import i18n, { guestLocale } from '../lib/i18n';
 
 interface AuthContextValue {
   user: UserResponse | null;
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     auth.clearTokens();
     setUser(null);
+    void i18n.changeLanguage(guestLocale());
   };
 
   return (
