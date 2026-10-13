@@ -46,12 +46,6 @@
     "titleSignup": "建立帳號",
     "subtitleLogin": "登入您的 Keni 帳號",
     "subtitleSignup": "設定您的個人財務追蹤器",
-    "tagline": "輕鬆記帳，\n毫無負擔。",
-    "taglineDesc": "輸入「咖啡 150」，拍下收據，或直接問，\nKeni 都能理解。幾秒內記錄任何交易。",
-    "featureAi": "AI 指令列，幾秒內記錄任何內容",
-    "featureReceipt": "收據與發票掃描",
-    "featureChat": "以自然語言與您的數據對話",
-    "featureWallets": "多個錢包與貨幣",
     "displayNameLabel": "顯示名稱（選填）",
     "displayNamePlaceholder": "您的名字",
     "usernameLabel": "使用者名稱",
@@ -504,9 +498,6 @@
     "step3Desc": "Keni 的工具將自動出現。詢問您的 AI 助理列出支出、新增交易或查看預算。"
   },
   "oauth": {
-    "tagline": "安全\n授權。",
-    "taglineDesc": "使用您的 Keni 帳號\n授予已連接應用程式的存取權。",
-    "requestingAccess": "請求存取",
     "loading": "載入中…",
     "errorTitle": "無效的請求",
     "errorDesc": "此授權連結無效或已過期。",

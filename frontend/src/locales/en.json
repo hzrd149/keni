@@ -46,12 +46,6 @@
     "titleSignup": "Create account",
     "subtitleLogin": "Sign in to your Keni instance",
     "subtitleSignup": "Set up your personal finance tracker",
-    "tagline": "Money tracked\nwithout the friction.",
-    "taglineDesc": "Type \"coffee 4.50\", snap a receipt, or just ask -\nKeni understands. Record any transaction in seconds.",
-    "featureAi": "AI command bar to log anything in seconds",
-    "featureReceipt": "Receipt & invoice scanning",
-    "featureChat": "Chat with your data in plain language",
-    "featureWallets": "Multiple wallets & currencies",
     "displayNameLabel": "Display name (optional)",
     "displayNamePlaceholder": "Your name",
     "usernameLabel": "Username",
@@ -504,9 +498,6 @@
     "step3Desc": "Keni's tools will appear automatically. Ask your AI assistant to list expenses, add transactions, or check budgets."
   },
   "oauth": {
-    "tagline": "Secure\nauthorization.",
-    "taglineDesc": "Grant access to a connected application\nusing your Keni account.",
-    "requestingAccess": "Requesting access",
     "loading": "Loading…",
     "errorTitle": "Invalid request",
     "errorDesc": "This authorization link is invalid or has expired.",
