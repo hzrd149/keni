@@ -1,7 +1,9 @@
-import loadingSrc from './assets/loading.svg';
+import logoLightSrc from './assets/logo.svg';
+import logoDarkSrc from './assets/logo-white.svg';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { WalletProvider } from './contexts/WalletContext';
+import { useTheme } from './lib/theme';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { OAuthAuthorizePage } from './pages/OAuthAuthorizePage';
@@ -33,6 +35,7 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 }
 
 function AppLoader() {
+  const loadingSrc = useTheme() === 'dark' ? logoDarkSrc : logoLightSrc;
   return (
     <div style={{
       minHeight: '100dvh',

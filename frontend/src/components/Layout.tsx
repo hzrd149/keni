@@ -6,7 +6,8 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 import { createPortal } from 'react-dom';
-import logoSrc from '../assets/logo.svg';
+import logoLightSrc from '../assets/logo.svg';
+import logoDarkSrc from '../assets/logo-white.svg';
 import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeftRight,
@@ -36,7 +37,7 @@ import { CommandBar } from './CommandBar';
 import { Modal } from './ui/Modal';
 import { getSharedPayload, clearSharedPayload } from '../lib/shareTarget';
 import { CMD_K, getInitials } from '../lib/utils';
-import { setThemePreference, useThemePreference } from '../lib/theme';
+import { setThemePreference, useTheme, useThemePreference } from '../lib/theme';
 import type { ThemePreference } from '../lib/theme';
 import './layout.css';
 
@@ -120,6 +121,7 @@ export function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const themePref = useThemePreference();
+  const logoSrc = useTheme() === 'dark' ? logoDarkSrc : logoLightSrc;
   const { wallets, activeWallet, setActiveWallet } = useWallet();
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdInitialPayload, setCmdInitialPayload] = useState<{ text?: string; files?: File[] } | undefined>();
