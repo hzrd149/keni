@@ -30,8 +30,10 @@ from app.models.transaction import Transaction, TransactionLink, TransactionTag
 from app.models.user import User
 from app.models.wallet import Wallet
 from app.schemas.color import COLOR_PATTERN
+from app.schemas.transaction import BulkUpdateRequest
 from app.services.category_tag import find_or_create_category, find_or_create_tag
 from app.services.mcp_oauth_provider import KeniOAuthProvider
+from app.services.transaction_bulk import apply_bulk_update
 from app.services.transaction_group import adjust_group_parent_amount, counted_filter, has_children
 
 if TYPE_CHECKING:
@@ -1382,6 +1384,87 @@ async def update_transaction(params: UpdateTransactionInput) -> dict[str, Any]: 
         row = _transaction_to_dict(t, cat, tags)
         row["linked_transactions"] = await _get_linked_transactions(t.id, session)
         return row
+    return {"error": "Database error"}
+
+
+@dataclass
+class BulkUpdateTransactionsInput:
+    wallet_id: str
+    transaction_ids: list[str]
+    category_id: str | None = None
+    add_tag_ids: list[str] = field(default_factory=list)
+    remove_tag_ids: list[str] = field(default_factory=list)
+
+
+@mcp.tool(annotations=_ann("Bulk Update Transactions", destructive=True, idempotent=True))
+async def bulk_update_transactions(  # ruff: ignore[too-many-return-statements, too-many-branches]
+    params: BulkUpdateTransactionsInput,
+) -> dict[str, Any]:
+    """
+    Update the category and/or tags of many transactions in one wallet at once.
+
+    Setting a category on a group parent also sets it on all of the parent's
+    sub-transactions; to change only some sub-transactions, pass their own ids instead.
+    Transaction ids not found in the wallet are skipped.
+
+    Args:
+        params.wallet_id: UUID of the wallet the transactions belong to.
+        params.transaction_ids: UUIDs of the transactions to update (at least one).
+        params.category_id: UUID of the category to move them to.
+        params.add_tag_ids: Tag UUIDs to add (existing tags are kept).
+        params.remove_tag_ids: Tag UUIDs to remove.
+    """
+    user = await _get_authenticated_user()
+    if not params.transaction_ids:
+        return {"error": "transaction_ids must not be empty"}
+    if params.category_id is None and not params.add_tag_ids and not params.remove_tag_ids:
+        return {"error": "Provide category_id, add_tag_ids or remove_tag_ids"}
+
+    w_id = _parse_uuid(params.wallet_id, "wallet_id")
+    if isinstance(w_id, str):
+        return {"error": w_id}
+    ids: dict[str, list[uuid.UUID]] = {}
+    for key in ("transaction_ids", "add_tag_ids", "remove_tag_ids"):
+        ids[key] = []
+        for raw in getattr(params, key):
+            parsed = _parse_uuid(raw, key)
+            if isinstance(parsed, str):
+                return {"error": parsed}
+            ids[key].append(parsed)
+    c_id = None
+    if params.category_id is not None:
+        c_id = _parse_uuid(params.category_id, "category_id")
+        if isinstance(c_id, str):
+            return {"error": c_id}
+
+    async for session in get_session():
+        wallet_result = await session.exec(
+            select(Wallet).where(Wallet.id == w_id, Wallet.user_id == user.id)
+        )
+        if not wallet_result.first():
+            return {"error": "Wallet not found"}
+        if c_id is not None:
+            cat_result = await session.exec(
+                select(Category).where(Category.id == c_id, Category.user_id == user.id)
+            )
+            if not cat_result.first():
+                return {"error": "Category not found"}
+        for tag_id in {*ids["add_tag_ids"], *ids["remove_tag_ids"]}:
+            tag_result = await session.exec(
+                select(Tag).where(Tag.id == tag_id, Tag.user_id == user.id)
+            )
+            if not tag_result.first():
+                return {"error": f"Tag {tag_id} not found"}
+
+        body = BulkUpdateRequest(
+            transaction_ids=ids["transaction_ids"],
+            category_id=c_id,
+            add_tag_ids=ids["add_tag_ids"] or None,
+            remove_tag_ids=ids["remove_tag_ids"] or None,
+        )
+        updated_count = await apply_bulk_update(session, w_id, body)
+        await session.commit()
+        return {"updated_count": updated_count}
     return {"error": "Database error"}
 
 
