@@ -13,6 +13,7 @@ from app.models.transaction import Transaction
 from app.models.user import User
 from app.models.wallet import Wallet
 from app.schemas.wallet import WalletCreate, WalletResponse, WalletSummary, WalletUpdate
+from app.services.transaction_group import counted_filter
 
 router = APIRouter(prefix="/api/wallets", tags=["wallets"])
 
@@ -64,10 +65,11 @@ async def get_wallet(
     wallet_id: uuid.UUID, current_user: CurrentUser, session: DbDep
 ) -> WalletSummary:
     wallet = await _get_wallet_or_404(wallet_id, current_user.id, session)
+    counted = counted_filter(current_user.count_sub_transactions)
 
     expense_total_result = await session.exec(
         select(func.coalesce(func.sum(Transaction.amount), 0.0)).where(
-            Transaction.wallet_id == wallet_id, Transaction.type == "expense"
+            Transaction.wallet_id == wallet_id, Transaction.type == "expense", counted
         )
     )
     total_expenses = expense_total_result.one()
@@ -75,7 +77,7 @@ async def get_wallet(
     expense_count_result = await session.exec(
         select(func.count()).select_from(
             select(Transaction)
-            .where(Transaction.wallet_id == wallet_id, Transaction.type == "expense")
+            .where(Transaction.wallet_id == wallet_id, Transaction.type == "expense", counted)
             .subquery()
         )
     )
@@ -83,7 +85,7 @@ async def get_wallet(
 
     income_total_result = await session.exec(
         select(func.coalesce(func.sum(Transaction.amount), 0.0)).where(
-            Transaction.wallet_id == wallet_id, Transaction.type == "income"
+            Transaction.wallet_id == wallet_id, Transaction.type == "income", counted
         )
     )
     total_income = income_total_result.one()
@@ -91,7 +93,7 @@ async def get_wallet(
     income_count_result = await session.exec(
         select(func.count()).select_from(
             select(Transaction)
-            .where(Transaction.wallet_id == wallet_id, Transaction.type == "income")
+            .where(Transaction.wallet_id == wallet_id, Transaction.type == "income", counted)
             .subquery()
         )
     )

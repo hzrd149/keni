@@ -32,7 +32,7 @@ from app.models.wallet import Wallet
 from app.schemas.color import COLOR_PATTERN
 from app.services.category_tag import find_or_create_category, find_or_create_tag
 from app.services.mcp_oauth_provider import KeniOAuthProvider
-from app.services.transaction_group import adjust_group_parent_amount, has_children
+from app.services.transaction_group import adjust_group_parent_amount, counted_filter, has_children
 
 if TYPE_CHECKING:
     from app.services.mcp_oauth_provider import KeniAccessToken
@@ -811,7 +811,9 @@ class GetSummaryInput:
     end_date: str | None = None
 
 
-async def _compute_summary(params: GetSummaryInput, user_id: uuid.UUID) -> dict[str, Any] | str:  # ruff: ignore[too-many-locals]
+async def _compute_summary(  # ruff: ignore[too-many-locals]
+    params: GetSummaryInput, user_id: uuid.UUID, count_sub_transactions: bool
+) -> dict[str, Any] | str:
     w_id = _parse_uuid(params.wallet_id, "wallet_id")
     if isinstance(w_id, str):
         return w_id
@@ -824,7 +826,7 @@ async def _compute_summary(params: GetSummaryInput, user_id: uuid.UUID) -> dict[
             return "Wallet not found"
 
         query = select(Transaction).where(
-            Transaction.wallet_id == w_id, col(Transaction.group_id).is_(None)
+            Transaction.wallet_id == w_id, counted_filter(count_sub_transactions)
         )
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
@@ -915,7 +917,7 @@ async def get_summary(params: GetSummaryInput) -> dict[str, Any]:
         params.end_date: ISO 8601 end date filter.
     """
     user = await _get_authenticated_user()
-    result = await _compute_summary(params, user.id)
+    result = await _compute_summary(params, user.id, user.count_sub_transactions)
     if isinstance(result, str):
         return {"error": result}
     return result
@@ -1564,7 +1566,7 @@ async def get_spending_summary(params: GetSpendingSummaryInput) -> dict[str, Any
             return {"error": "Wallet not found"}
 
         query = select(Transaction).where(
-            Transaction.wallet_id == w_id, col(Transaction.group_id).is_(None)
+            Transaction.wallet_id == w_id, counted_filter(user.count_sub_transactions)
         )
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
@@ -1627,7 +1629,7 @@ async def get_category_breakdown(params: GetCategoryBreakdownInput) -> dict[str,
         query = select(Transaction).where(
             Transaction.wallet_id == w_id,
             Transaction.type == params.type,
-            col(Transaction.group_id).is_(None),
+            counted_filter(user.count_sub_transactions),
         )
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
@@ -1702,7 +1704,7 @@ async def get_monthly_trend(params: GetMonthlyTrendInput) -> dict[str, Any]:
             return {"error": "Wallet not found"}
 
         query = select(Transaction).where(
-            Transaction.wallet_id == w_id, col(Transaction.group_id).is_(None)
+            Transaction.wallet_id == w_id, counted_filter(user.count_sub_transactions)
         )
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
@@ -2027,12 +2029,14 @@ def _budget_period_start(period: str) -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-async def _budget_to_dict(budget: Budget, session: Any) -> dict[str, Any]:
+async def _budget_to_dict(
+    budget: Budget, session: Any, count_sub_transactions: bool
+) -> dict[str, Any]:
     period_start = _budget_period_start(budget.period)
     query = select(Transaction).where(
         col(Transaction.date) >= period_start,
         Transaction.type == "expense",
-        col(Transaction.group_id).is_(None),
+        counted_filter(count_sub_transactions),
     )
     if budget.wallet_id is not None:
         query = query.where(Transaction.wallet_id == budget.wallet_id)
@@ -2076,7 +2080,11 @@ async def list_budgets() -> dict[str, Any]:
     user = await _get_authenticated_user()
     async for session in get_session():
         result = await session.exec(select(Budget).where(Budget.user_id == user.id))
-        return {"items": [await _budget_to_dict(b, session) for b in result.all()]}
+        return {
+            "items": [
+                await _budget_to_dict(b, session, user.count_sub_transactions) for b in result.all()
+            ]
+        }
     return {"error": "Database error"}
 
 
@@ -2140,7 +2148,7 @@ async def create_budget(params: CreateBudgetInput) -> dict[str, Any]:  # ruff: i
         session.add(budget)
         await session.commit()
         await session.refresh(budget)
-        return await _budget_to_dict(budget, session)
+        return await _budget_to_dict(budget, session, user.count_sub_transactions)
     return {"error": "Database error"}
 
 
@@ -2215,7 +2223,7 @@ async def update_budget(params: UpdateBudgetInput) -> dict[str, Any]:  # ruff: i
         session.add(budget)
         await session.commit()
         await session.refresh(budget)
-        return await _budget_to_dict(budget, session)
+        return await _budget_to_dict(budget, session, user.count_sub_transactions)
     return {"error": "Database error"}
 
 

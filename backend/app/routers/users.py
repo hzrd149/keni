@@ -38,6 +38,7 @@ async def get_me(current_user: CurrentUser) -> UserResponse:
         custom_ai_prompt=current_user.custom_ai_prompt,
         global_currency=current_user.global_currency,
         fx_use_historical_rates=current_user.fx_use_historical_rates,
+        count_sub_transactions=current_user.count_sub_transactions,
         language=current_user.language,
     )
 
@@ -61,6 +62,8 @@ async def update_me(
         and body.fx_use_historical_rates is not None
     ):
         current_user.fx_use_historical_rates = body.fx_use_historical_rates
+    if body.count_sub_transactions is not None:
+        current_user.count_sub_transactions = body.count_sub_transactions
     if "language" in body.model_fields_set:
         current_user.language = body.language
 
@@ -78,6 +81,7 @@ async def update_me(
         custom_ai_prompt=current_user.custom_ai_prompt,
         global_currency=current_user.global_currency,
         fx_use_historical_rates=current_user.fx_use_historical_rates,
+        count_sub_transactions=current_user.count_sub_transactions,
         language=current_user.language,
     )
 

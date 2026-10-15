@@ -29,6 +29,7 @@ async def chat(
         message=body.message,
         wallet_id=body.wallet_id,
         session=session,
+        count_sub_transactions=current_user.count_sub_transactions,
         timezone=timezone,
     )
     return ChatResponse(response=result.response, data=result.data)

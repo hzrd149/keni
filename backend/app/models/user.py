@@ -21,6 +21,7 @@ class User(SQLModel, table=True):
     custom_ai_prompt: str | None = Field(default=None, max_length=500)
     global_currency: str | None = Field(default=None, max_length=10)
     fx_use_historical_rates: bool = Field(default=False)
+    count_sub_transactions: bool = Field(default=True)
     language: str | None = Field(default=None, max_length=10)
     created_at: datetime = Field(
         default=None,

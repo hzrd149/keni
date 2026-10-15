@@ -25,6 +25,7 @@ from app.providers.errors import (
 )
 from app.services.ai_transaction import _decrypt_key, get_ai_provider_record
 from app.services.category_tag import find_or_create_category, find_or_create_tag
+from app.services.transaction_group import counted_filter
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -341,18 +342,28 @@ def _build_date_filters(date_from: str | None, date_to: str | None) -> list[Any]
 
 
 def _make_executor(
-    wallet_ids: list[Any], wallets: list[Wallet], user_id: uuid.UUID, session: AsyncSession
+    wallet_ids: list[Any],
+    wallets: list[Wallet],
+    user_id: uuid.UUID,
+    session: AsyncSession,
+    count_sub_transactions: bool,
 ) -> Any:
     async def execute_tool(tool_name: str, args: dict[str, Any]) -> Any:  # ruff: ignore[too-many-branches]
         logger.info("AI tool call: %s(%s)", tool_name, args)
         if tool_name == "get_transactions":
-            result = await _tool_get_transactions(wallet_ids, session, args)
+            result = await _tool_get_transactions(wallet_ids, session, args, count_sub_transactions)
         elif tool_name == "get_spending_summary":
-            result = await _tool_get_spending_summary(wallet_ids, session, args)
+            result = await _tool_get_spending_summary(
+                wallet_ids, session, args, count_sub_transactions
+            )
         elif tool_name == "get_category_breakdown":
-            result = await _tool_get_category_breakdown(wallet_ids, session, args)
+            result = await _tool_get_category_breakdown(
+                wallet_ids, session, args, count_sub_transactions
+            )
         elif tool_name == "get_monthly_trend":
-            result = await _tool_get_monthly_trend(wallet_ids, session, args)
+            result = await _tool_get_monthly_trend(
+                wallet_ids, session, args, count_sub_transactions
+            )
         elif tool_name == "convert_currency":
             result = await _tool_convert_currency(args)
         elif tool_name == "list_wallets":
@@ -390,7 +401,7 @@ async def _resolve_cat_map(txns: list[Transaction], session: AsyncSession) -> di
 
 
 async def _tool_get_transactions(
-    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any]
+    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any], count_sub_transactions: bool
 ) -> dict[str, Any]:
     date_from: str | None = args.get("date_from")
     date_to: str | None = args.get("date_to")
@@ -399,7 +410,10 @@ async def _tool_get_transactions(
     limit = min(int(args.get("limit", 50)), _MAX_TOOL_RESULTS)
     offset = int(args.get("offset", 0))
 
-    filters: list[Any] = [col(Transaction.wallet_id).in_(wallet_ids)]
+    filters: list[Any] = [
+        col(Transaction.wallet_id).in_(wallet_ids),
+        counted_filter(count_sub_transactions),
+    ]
     filters.extend(_build_date_filters(date_from, date_to))
     if txn_type:
         filters.append(Transaction.type == txn_type)
@@ -432,12 +446,15 @@ async def _tool_get_transactions(
 
 
 async def _tool_get_spending_summary(
-    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any]
+    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any], count_sub_transactions: bool
 ) -> dict[str, Any]:
     date_from: str | None = args.get("date_from")
     date_to: str | None = args.get("date_to")
 
-    filters: list[Any] = [col(Transaction.wallet_id).in_(wallet_ids)]
+    filters: list[Any] = [
+        col(Transaction.wallet_id).in_(wallet_ids),
+        counted_filter(count_sub_transactions),
+    ]
     filters.extend(_build_date_filters(date_from, date_to))
 
     result = await session.exec(select(Transaction).where(and_(*filters)))
@@ -458,14 +475,18 @@ async def _tool_get_spending_summary(
 
 
 async def _tool_get_category_breakdown(
-    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any]
+    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any], count_sub_transactions: bool
 ) -> dict[str, Any]:
     date_from: str | None = args.get("date_from")
     date_to: str | None = args.get("date_to")
     txn_type: str = args.get("type", "expense")
     limit = int(args.get("limit", 20))
 
-    filters: list[Any] = [col(Transaction.wallet_id).in_(wallet_ids), Transaction.type == txn_type]
+    filters: list[Any] = [
+        col(Transaction.wallet_id).in_(wallet_ids),
+        Transaction.type == txn_type,
+        counted_filter(count_sub_transactions),
+    ]
     filters.extend(_build_date_filters(date_from, date_to))
 
     result = await session.exec(select(Transaction).where(and_(*filters)))
@@ -492,12 +513,15 @@ async def _tool_get_category_breakdown(
 
 
 async def _tool_get_monthly_trend(
-    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any]
+    wallet_ids: list[Any], session: AsyncSession, args: dict[str, Any], count_sub_transactions: bool
 ) -> dict[str, Any]:
     date_from: str | None = args.get("date_from")
     date_to: str | None = args.get("date_to")
 
-    filters: list[Any] = [col(Transaction.wallet_id).in_(wallet_ids)]
+    filters: list[Any] = [
+        col(Transaction.wallet_id).in_(wallet_ids),
+        counted_filter(count_sub_transactions),
+    ]
     filters.extend(_build_date_filters(date_from, date_to))
 
     result = await session.exec(
@@ -843,11 +867,12 @@ async def _tool_delete_transaction(
     return {"deleted": str(transaction_id)}
 
 
-async def chat_about_expenses(
+async def chat_about_expenses(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
     user_id: uuid.UUID,
     message: str,
     wallet_id: uuid.UUID | None,
     session: AsyncSession,
+    count_sub_transactions: bool,
     timezone: str | None = None,
 ) -> ChatResponse:
     record = await get_ai_provider_record(user_id, session)
@@ -871,7 +896,7 @@ async def chat_about_expenses(
         timezone=timezone or "UTC",
     )
 
-    tool_executor = _make_executor(wallet_ids, wallets, user_id, session)
+    tool_executor = _make_executor(wallet_ids, wallets, user_id, session, count_sub_transactions)
     provider = get_provider(
         record.provider,
         api_key=_decrypt_key(record.api_key_encrypted),

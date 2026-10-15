@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from app.services.ai_transaction import ParsedTransactionResult
 from app.services.category_tag import find_or_create_category, find_or_create_tag
 from app.services.pdf import extract_text_from_pdf
-from app.services.transaction_group import adjust_group_parent_amount, has_children
+from app.services.transaction_group import adjust_group_parent_amount, counted_filter, has_children
 from app.services.voice import transcribe_audio
 
 logger = logging.getLogger(__name__)
@@ -527,7 +527,7 @@ async def get_transaction_summary(
     await _get_wallet_or_404(wallet_id, current_user.id, session)
 
     base_query = select(Transaction).where(
-        Transaction.wallet_id == wallet_id, col(Transaction.group_id).is_(None)
+        Transaction.wallet_id == wallet_id, counted_filter(current_user.count_sub_transactions)
     )
     if date_range.start:
         base_query = base_query.where(col(Transaction.date) >= date_range.start)
@@ -604,7 +604,7 @@ async def get_transaction_analytics(
     day = func.date_trunc("day", func.timezone(date_range.tz.key, col(Transaction.date)))
     filters = [
         Transaction.wallet_id == wallet_id,
-        col(Transaction.group_id).is_(None),
+        counted_filter(current_user.count_sub_transactions),
         Transaction.type == transaction_type,
     ]
     if date_range.start:

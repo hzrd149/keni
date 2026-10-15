@@ -15,6 +15,7 @@ from app.models.transaction import Transaction
 from app.models.user import User
 from app.models.wallet import Wallet
 from app.schemas.budget import BudgetCreate, BudgetResponse, BudgetUpdate
+from app.services.transaction_group import counted_filter
 
 router = APIRouter(prefix="/api/budgets", tags=["budgets"])
 
@@ -59,13 +60,15 @@ def _period_start(period: str) -> datetime:
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-async def _compute_spent(budget: Budget, session: AsyncSession) -> float:
+async def _compute_spent(
+    budget: Budget, session: AsyncSession, count_sub_transactions: bool
+) -> float:
     period_start = _period_start(budget.period)
 
     query = select(Transaction).where(
         col(Transaction.date) >= period_start,
         Transaction.type == "expense",
-        col(Transaction.group_id).is_(None),
+        counted_filter(count_sub_transactions),
     )
 
     if budget.wallet_id is not None:
@@ -84,8 +87,10 @@ async def _compute_spent(budget: Budget, session: AsyncSession) -> float:
     return sum(e.amount for e in result.all())
 
 
-async def _to_response(budget: Budget, session: AsyncSession) -> BudgetResponse:
-    spent = await _compute_spent(budget, session)
+async def _to_response(
+    budget: Budget, session: AsyncSession, count_sub_transactions: bool
+) -> BudgetResponse:
+    spent = await _compute_spent(budget, session, count_sub_transactions)
     remaining = budget.amount - spent
     percentage_used = (spent / budget.amount * 100) if budget.amount > 0 else 0.0
     return BudgetResponse(
@@ -123,14 +128,14 @@ async def create_budget(
     session.add(budget)
     await session.commit()
     await session.refresh(budget)
-    return await _to_response(budget, session)
+    return await _to_response(budget, session, current_user.count_sub_transactions)
 
 
 @router.get("")
 async def list_budgets(current_user: CurrentUser, session: DbDep) -> list[BudgetResponse]:
     result = await session.exec(select(Budget).where(Budget.user_id == current_user.id))
     budgets = result.all()
-    return [await _to_response(b, session) for b in budgets]
+    return [await _to_response(b, session, current_user.count_sub_transactions) for b in budgets]
 
 
 @router.patch("/{budget_id}")
@@ -153,7 +158,7 @@ async def update_budget(
     session.add(budget)
     await session.commit()
     await session.refresh(budget)
-    return await _to_response(budget, session)
+    return await _to_response(budget, session, current_user.count_sub_transactions)
 
 
 @router.delete("/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)

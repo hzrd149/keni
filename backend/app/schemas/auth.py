@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     custom_ai_prompt: str | None = None
     global_currency: str | None = None
     fx_use_historical_rates: bool = False
+    count_sub_transactions: bool = True
     language: str | None = None
 
 
@@ -47,6 +48,7 @@ class UpdateProfileRequest(BaseModel):
     custom_ai_prompt: str | None = Field(default=None, max_length=500)
     global_currency: str | None = Field(default=None, max_length=10)
     fx_use_historical_rates: bool | None = None
+    count_sub_transactions: bool | None = None
     language: str | None = Field(default=None, max_length=10)
 
 
