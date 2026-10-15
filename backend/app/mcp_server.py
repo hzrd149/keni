@@ -30,7 +30,11 @@ from app.models.transaction import Transaction, TransactionLink, TransactionTag
 from app.models.user import User
 from app.models.wallet import Wallet
 from app.schemas.color import COLOR_PATTERN
-from app.services.category_tag import find_or_create_category, find_or_create_tag
+from app.services.category_tag import (
+    find_or_create_category,
+    find_or_create_tag,
+    move_category_transactions,
+)
 from app.services.mcp_oauth_provider import KeniOAuthProvider
 from app.services.transaction_group import adjust_group_parent_amount, counted_filter, has_children
 
@@ -434,6 +438,65 @@ async def update_category(  # ruff: ignore[too-many-return-statements]
         await session.commit()
         await session.refresh(cat)
         return _category_to_dict(cat)
+    return {"error": "Database error"}
+
+
+@mcp.tool(annotations=_ann("Move Category Transactions", destructive=True, idempotent=True))
+async def move_transactions_between_categories(  # ruff: ignore[too-many-return-statements]
+    source_category_id: str, target_category_id: str, wallet_id: str | None = None
+) -> dict[str, Any]:
+    """
+    Move every transaction in one category to another category in a single call.
+
+    Sub-transactions inside groups are matched by their own category, not their parent's.
+    Both categories are kept; use delete_category afterwards to remove the source if wanted.
+
+    Args:
+        source_category_id: UUID of the category to move transactions out of.
+        target_category_id: UUID of the category to move them into.
+        wallet_id: Optional wallet UUID to only move transactions in that wallet.
+            Omit to move across all wallets.
+    """
+    user = await _get_authenticated_user()
+    src_id = _parse_uuid(source_category_id, "source_category_id")
+    if isinstance(src_id, str):
+        return {"error": src_id}
+    dst_id = _parse_uuid(target_category_id, "target_category_id")
+    if isinstance(dst_id, str):
+        return {"error": dst_id}
+    if src_id == dst_id:
+        return {"error": "Source and target categories must differ"}
+    w_id = None
+    if wallet_id is not None:
+        w_id = _parse_uuid(wallet_id, "wallet_id")
+        if isinstance(w_id, str):
+            return {"error": w_id}
+
+    async for session in get_session():
+        cat_result = await session.exec(
+            select(Category.id).where(
+                col(Category.id).in_([src_id, dst_id]), Category.user_id == user.id
+            )
+        )
+        found = set(cat_result.all())
+        if src_id not in found:
+            return {"error": "Source category not found"}
+        if dst_id not in found:
+            return {"error": "Target category not found"}
+        if w_id is not None:
+            wallet_result = await session.exec(
+                select(Wallet).where(Wallet.id == w_id, Wallet.user_id == user.id)
+            )
+            if not wallet_result.first():
+                return {"error": "Wallet not found"}
+
+        moved = await move_category_transactions(session, src_id, dst_id, w_id)
+        await session.commit()
+        return {
+            "source_category_id": source_category_id,
+            "target_category_id": target_category_id,
+            "moved": moved,
+        }
     return {"error": "Database error"}
 
 
