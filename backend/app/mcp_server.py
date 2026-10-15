@@ -612,6 +612,7 @@ class ListTransactionsInput:
     max_amount: float | None = None
     sort_by: str = "date"
     sort_order: str = "desc"
+    include_children: bool = False
 
 
 def _apply_date_filters(
@@ -630,7 +631,7 @@ def _apply_date_filters(
     return query, None
 
 
-async def _fetch_transactions(  # ruff: ignore[too-many-return-statements, too-many-branches, too-many-locals]
+async def _fetch_transactions(  # ruff: ignore[too-many-return-statements, too-many-branches, too-many-locals, complex-structure]
     params: ListTransactionsInput, user_id: uuid.UUID
 ) -> dict[str, Any] | str:
     w_id = _parse_uuid(params.wallet_id, "wallet_id")
@@ -647,9 +648,9 @@ async def _fetch_transactions(  # ruff: ignore[too-many-return-statements, too-m
         if not wallet_result.first():
             return "Wallet not found"
 
-        query = select(Transaction).where(
-            Transaction.wallet_id == w_id, col(Transaction.group_id).is_(None)
-        )
+        query = select(Transaction).where(Transaction.wallet_id == w_id)
+        if not params.include_children:
+            query = query.where(col(Transaction.group_id).is_(None))
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
             return err
@@ -719,6 +720,11 @@ async def list_transactions(params: ListTransactionsInput) -> dict[str, Any]:
     The linked transactions themselves are not included here; call get_transaction to retrieve
     the full "linked_transactions" objects for any item where linked_count > 0.
 
+    By default only top-level transactions are returned; sub-transactions inside a group
+    are hidden. Set include_children to also return sub-transactions as their own rows, so
+    filters like category_id or search match them. A sub-transaction's "group_id" is the
+    id of its parent.
+
     Args:
         params.wallet_id: UUID of the wallet to query.
         params.page: Page number (default 1).
@@ -733,6 +739,7 @@ async def list_transactions(params: ListTransactionsInput) -> dict[str, Any]:
         params.max_amount: Maximum amount filter.
         params.sort_by: Sort field: "date" (default) or "amount".
         params.sort_order: Sort direction: "desc" (default) or "asc".
+        params.include_children: Also return sub-transactions of groups (default false).
     """
     user = await _get_authenticated_user()
     result = await _fetch_transactions(params, user.id)
