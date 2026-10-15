@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +7,6 @@ from sqlmodel import select
 
 from app.models.category import Category
 from app.models.tag import Tag
-from app.models.transaction import Transaction
 
 if TYPE_CHECKING:
     import uuid
@@ -72,29 +70,3 @@ async def find_or_create_tag(user_id: uuid.UUID, name: str, session: AsyncSessio
         return existing
     await session.refresh(tag)
     return tag
-
-
-async def move_category_transactions(
-    session: AsyncSession,
-    source_id: uuid.UUID,
-    target_id: uuid.UUID,
-    wallet_id: uuid.UUID | None = None,
-) -> int:
-    """Reassign every transaction in source_id to target_id, optionally within one wallet.
-
-    Sub-transactions are matched by their own category, not their parent's.
-    Callers must verify the user owns both categories and the wallet. Does not commit.
-    """
-    query = select(Transaction).where(Transaction.category_id == source_id)
-    if wallet_id is not None:
-        query = query.where(Transaction.wallet_id == wallet_id)
-    result = await session.exec(query)
-
-    now = datetime.now(UTC)
-    moved = 0
-    for transaction in result.all():
-        transaction.category_id = target_id
-        transaction.updated_at = now
-        session.add(transaction)
-        moved += 1
-    return moved

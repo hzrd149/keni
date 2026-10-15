@@ -11,15 +11,7 @@ from app.dependencies import get_current_user, get_db
 from app.models.category import Category
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.models.wallet import Wallet
-from app.schemas.category import (
-    CategoryCreate,
-    CategoryMoveTransactionsRequest,
-    CategoryMoveTransactionsResponse,
-    CategoryResponse,
-    CategoryUpdate,
-)
-from app.services.category_tag import move_category_transactions
+from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
 
@@ -104,34 +96,6 @@ async def update_category(
     await session.commit()
     await session.refresh(cat)
     return _category_to_response(cat)
-
-
-@router.post("/{category_id}/move-transactions")
-async def move_transactions(
-    category_id: uuid.UUID,
-    body: CategoryMoveTransactionsRequest,
-    current_user: CurrentUser,
-    session: DbDep,
-) -> CategoryMoveTransactionsResponse:
-    if body.target_category_id == category_id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Source and target categories must differ",
-        )
-    await _get_category_or_404(category_id, current_user.id, session)
-    await _get_category_or_404(body.target_category_id, current_user.id, session)
-    if body.wallet_id is not None:
-        wallet_result = await session.exec(
-            select(Wallet).where(Wallet.id == body.wallet_id, Wallet.user_id == current_user.id)
-        )
-        if wallet_result.first() is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Wallet not found")
-
-    moved = await move_category_transactions(
-        session, category_id, body.target_category_id, body.wallet_id
-    )
-    await session.commit()
-    return CategoryMoveTransactionsResponse(moved=moved)
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -18,15 +18,6 @@ class CategoryUpdate(BaseModel):
     color: str | None = Field(default=None, max_length=20, pattern=COLOR_PATTERN)
 
 
-class CategoryMoveTransactionsRequest(BaseModel):
-    target_category_id: uuid.UUID
-    wallet_id: uuid.UUID | None = None
-
-
-class CategoryMoveTransactionsResponse(BaseModel):
-    moved: int
-
-
 class CategoryResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
