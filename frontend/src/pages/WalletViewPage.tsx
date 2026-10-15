@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef } fr
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams, useOutletContext, useNavigate, type NavigateFunction } from 'react-router-dom';
-import { ArrowLeftRight, Check, ChevronDown, Command, Filter, FolderOpen, Plus, Search, SortAsc, SortDesc, Sparkles, Tag, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Check, ChevronDown, Command, CornerDownRight, Filter, FolderOpen, Plus, Search, SortAsc, SortDesc, Sparkles, Tag, Trash2, X } from 'lucide-react';
 import { expenses as expensesApi, categories as categoriesApi, wallets as walletsApi, tags as tagsApi } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -106,6 +106,7 @@ export function WalletViewPage() {
   const maxAmount = searchParams.get('max_amount') ?? '';
   const typeFilter = searchParams.get('type') ?? '';
   const hasChildrenFilter = searchParams.get('has_children') === '1';
+  const includeChildren = searchParams.get('include_children') === '1';
 
   const PAGE_SIZE = 20;
 
@@ -148,6 +149,7 @@ export function WalletViewPage() {
           max_amount: maxAmount ? Number(maxAmount) : undefined,
           type: typeFilter === 'expense' || typeFilter === 'income' ? typeFilter : undefined,
           has_children: hasChildrenFilter ? 'true' : undefined,
+          include_children: includeChildren ? 'true' : undefined,
         }),
       ]);
       setWallet(w);
@@ -159,7 +161,7 @@ export function WalletViewPage() {
     } finally {
       setLoading(false);
     }
-  }, [walletId, page, search, selectedCategoryIds, selectedTagIds, sortBy, sortOrder, startDate, endDate, minAmount, maxAmount, typeFilter, hasChildrenFilter, toast, expenseAddedKey]);
+  }, [walletId, page, search, selectedCategoryIds, selectedTagIds, sortBy, sortOrder, startDate, endDate, minAmount, maxAmount, typeFilter, hasChildrenFilter, includeChildren, toast, expenseAddedKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -465,10 +467,10 @@ export function WalletViewPage() {
   };
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
-  const hasFilters = search || selectedCategoryIds.length > 0 || selectedTagIds.length > 0 || startDate || endDate || minAmount || maxAmount || typeFilter || hasChildrenFilter;
+  const hasFilters = search || selectedCategoryIds.length > 0 || selectedTagIds.length > 0 || startDate || endDate || minAmount || maxAmount || typeFilter || hasChildrenFilter || includeChildren;
   // Count of filters controlled by the advanced panel (search & category have their own UI)
   const panelFilterCount =
-    (startDate ? 1 : 0) + (endDate ? 1 : 0) + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0) + (typeFilter ? 1 : 0) + (hasChildrenFilter ? 1 : 0) + selectedTagIds.length;
+    (startDate ? 1 : 0) + (endDate ? 1 : 0) + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0) + (typeFilter ? 1 : 0) + (hasChildrenFilter ? 1 : 0) + (includeChildren ? 1 : 0) + selectedTagIds.length;
   const selCount = selectedIds.size;
 
   // Tags that can still match given the other active filters; ineligible ones are dimmed, not hidden.
@@ -917,11 +919,12 @@ export function WalletViewPage() {
           <div className="input-group">
             <label className="input-label">{t('walletView.filterSubTransactions')}</label>
             <Select
-              value={hasChildrenFilter ? '1' : ''}
-              onChange={(v) => setParam({ has_children: v || null, page: null })}
+              value={hasChildrenFilter ? 'has' : includeChildren ? 'include' : ''}
+              onChange={(v) => setParam({ has_children: v === 'has' ? '1' : null, include_children: v === 'include' ? '1' : null, page: null })}
               options={[
                 { value: '', label: t('walletView.filterTypeAll') },
-                { value: '1', label: t('walletView.filterHasSubTransactions') },
+                { value: 'has', label: t('walletView.filterHasSubTransactions') },
+                { value: 'include', label: t('walletView.filterIncludeSubTransactions') },
               ]}
             />
           </div>
@@ -988,7 +991,7 @@ export function WalletViewPage() {
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <button
                 className="btn btn-ghost btn-md"
-                onClick={() => setParam({ q: null, category_ids: null, tag_ids: null, start_date: null, end_date: null, min_amount: null, max_amount: null, type: null, has_children: null, page: null })}
+                onClick={() => setParam({ q: null, category_ids: null, tag_ids: null, start_date: null, end_date: null, min_amount: null, max_amount: null, type: null, has_children: null, include_children: null, page: null })}
               >
                 <X size={14} /> {t('walletView.filterClearAll')}
               </button>
@@ -1264,6 +1267,7 @@ function ExpenseRow({
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {expense.group_id && <CornerDownRight size={13} style={{ color: 'var(--ink-faint)', marginRight: 4, verticalAlign: -1 }} />}
           {expense.description ?? expense.category.name}
         </div>
         <TransactionMeta
