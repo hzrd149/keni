@@ -96,6 +96,7 @@ function ProfileTab({ user, refreshUser, toast }: { user: UserResponse; refreshU
   const [globalCurrency, setGlobalCurrency] = useState<string>(user?.global_currency ?? '');
   const [fxHistorical, setFxHistorical] = useState<boolean>(user?.fx_use_historical_rates ?? false);
   const [language, setLanguage] = useState<string>(user?.language ?? i18n.resolvedLanguage ?? 'en');
+  const [countSubTransactions, setCountSubTransactions] = useState<boolean>(user?.count_sub_transactions ?? true);
   const [currencyOptions, setCurrencyOptions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -117,6 +118,7 @@ function ProfileTab({ user, refreshUser, toast }: { user: UserResponse; refreshU
         global_currency: globalCurrencyEnabled ? (globalCurrency || null) : null,
         fx_use_historical_rates: globalCurrencyEnabled ? fxHistorical : false,
         language: language || null,
+        count_sub_transactions: countSubTransactions,
       });
       await refreshUser();
       setPassword('');
@@ -196,6 +198,18 @@ function ProfileTab({ user, refreshUser, toast }: { user: UserResponse; refreshU
             onChange={setLanguage}
             options={SUPPORTED_LOCALES}
           />
+        </div>
+        <div className="input-group">
+          <label className="input-label">{t('settings.profileGroupCounting')}</label>
+          <Select
+            value={countSubTransactions ? 'children' : 'parent'}
+            onChange={(v) => setCountSubTransactions(v === 'children')}
+            options={[
+              { value: 'children', label: t('settings.profileGroupCountingChildren') },
+              { value: 'parent', label: t('settings.profileGroupCountingParent') },
+            ]}
+          />
+          <span className="input-hint">{t('settings.profileGroupCountingHint')}</span>
         </div>
         <hr className="divider" />
         <div className="input-group">

@@ -158,7 +158,7 @@ export const auth = {
 
 export const users = {
   me: () => request<UserResponse>('/users/me'),
-  update: (data: { display_name?: string; password?: string; timezone?: string | null; custom_ai_prompt?: string | null; global_currency?: string | null; language?: string | null; fx_use_historical_rates?: boolean }) =>
+  update: (data: { display_name?: string; password?: string; timezone?: string | null; custom_ai_prompt?: string | null; global_currency?: string | null; language?: string | null; fx_use_historical_rates?: boolean; count_sub_transactions?: boolean }) =>
     request<UserResponse>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAccount: (password: string) =>
     request<void>('/users/me', { method: 'DELETE', body: JSON.stringify({ password }) }),

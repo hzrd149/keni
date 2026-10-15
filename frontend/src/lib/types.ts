@@ -13,6 +13,7 @@ export interface UserResponse {
   custom_ai_prompt: string | null;
   global_currency: string | null;
   fx_use_historical_rates: boolean;
+  count_sub_transactions: boolean;
   language: string | null;
 }
 
