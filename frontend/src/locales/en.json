@@ -290,6 +290,7 @@
     "filterSubTransactions": "Sub-transactions",
     "filterHasSubTransactions": "With sub-transactions",
     "filterIncludeSubTransactions": "Include sub-transactions",
+    "filterOnlySubTransactions": "Only sub-transactions",
     "filterTags": "Tags",
     "filterClearAll": "Clear all",
     "paginationPrev": "Previous",

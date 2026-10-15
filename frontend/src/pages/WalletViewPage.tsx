@@ -107,6 +107,7 @@ export function WalletViewPage() {
   const typeFilter = searchParams.get('type') ?? '';
   const hasChildrenFilter = searchParams.get('has_children') === '1';
   const includeChildren = searchParams.get('include_children') === '1';
+  const onlyChildren = searchParams.get('only_children') === '1';
 
   const PAGE_SIZE = 20;
 
@@ -150,6 +151,7 @@ export function WalletViewPage() {
           type: typeFilter === 'expense' || typeFilter === 'income' ? typeFilter : undefined,
           has_children: hasChildrenFilter ? 'true' : undefined,
           include_children: includeChildren ? 'true' : undefined,
+          only_children: onlyChildren ? 'true' : undefined,
         }),
       ]);
       setWallet(w);
@@ -161,7 +163,7 @@ export function WalletViewPage() {
     } finally {
       setLoading(false);
     }
-  }, [walletId, page, search, selectedCategoryIds, selectedTagIds, sortBy, sortOrder, startDate, endDate, minAmount, maxAmount, typeFilter, hasChildrenFilter, includeChildren, toast, expenseAddedKey]);
+  }, [walletId, page, search, selectedCategoryIds, selectedTagIds, sortBy, sortOrder, startDate, endDate, minAmount, maxAmount, typeFilter, hasChildrenFilter, includeChildren, onlyChildren, toast, expenseAddedKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -467,10 +469,10 @@ export function WalletViewPage() {
   };
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
-  const hasFilters = search || selectedCategoryIds.length > 0 || selectedTagIds.length > 0 || startDate || endDate || minAmount || maxAmount || typeFilter || hasChildrenFilter || includeChildren;
+  const hasFilters = search || selectedCategoryIds.length > 0 || selectedTagIds.length > 0 || startDate || endDate || minAmount || maxAmount || typeFilter || hasChildrenFilter || includeChildren || onlyChildren;
   // Count of filters controlled by the advanced panel (search & category have their own UI)
   const panelFilterCount =
-    (startDate ? 1 : 0) + (endDate ? 1 : 0) + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0) + (typeFilter ? 1 : 0) + (hasChildrenFilter ? 1 : 0) + (includeChildren ? 1 : 0) + selectedTagIds.length;
+    (startDate ? 1 : 0) + (endDate ? 1 : 0) + (minAmount ? 1 : 0) + (maxAmount ? 1 : 0) + (typeFilter ? 1 : 0) + (hasChildrenFilter ? 1 : 0) + (includeChildren ? 1 : 0) + (onlyChildren ? 1 : 0) + selectedTagIds.length;
   const selCount = selectedIds.size;
 
   // Tags that can still match given the other active filters; ineligible ones are dimmed, not hidden.
@@ -919,12 +921,13 @@ export function WalletViewPage() {
           <div className="input-group">
             <label className="input-label">{t('walletView.filterSubTransactions')}</label>
             <Select
-              value={hasChildrenFilter ? 'has' : includeChildren ? 'include' : ''}
-              onChange={(v) => setParam({ has_children: v === 'has' ? '1' : null, include_children: v === 'include' ? '1' : null, page: null })}
+              value={hasChildrenFilter ? 'has' : includeChildren ? 'include' : onlyChildren ? 'only' : ''}
+              onChange={(v) => setParam({ has_children: v === 'has' ? '1' : null, include_children: v === 'include' ? '1' : null, only_children: v === 'only' ? '1' : null, page: null })}
               options={[
                 { value: '', label: t('walletView.filterTypeAll') },
                 { value: 'has', label: t('walletView.filterHasSubTransactions') },
                 { value: 'include', label: t('walletView.filterIncludeSubTransactions') },
+                { value: 'only', label: t('walletView.filterOnlySubTransactions') },
               ]}
             />
           </div>
@@ -991,7 +994,7 @@ export function WalletViewPage() {
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <button
                 className="btn btn-ghost btn-md"
-                onClick={() => setParam({ q: null, category_ids: null, tag_ids: null, start_date: null, end_date: null, min_amount: null, max_amount: null, type: null, has_children: null, include_children: null, page: null })}
+                onClick={() => setParam({ q: null, category_ids: null, tag_ids: null, start_date: null, end_date: null, min_amount: null, max_amount: null, type: null, has_children: null, include_children: null, only_children: null, page: null })}
               >
                 <X size={14} /> {t('walletView.filterClearAll')}
               </button>
