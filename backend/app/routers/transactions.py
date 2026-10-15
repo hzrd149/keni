@@ -667,6 +667,7 @@ async def list_transactions(  # ruff: ignore[too-many-arguments, too-many-positi
     sort_by: Annotated[str, Query(pattern="^(date|amount|category)$")] = "date",
     sort_order: Annotated[str, Query(pattern="^(asc|desc)$")] = "desc",
     include_children: Annotated[bool, Query()] = False,
+    only_children: Annotated[bool, Query()] = False,
     with_children: Annotated[bool, Query(alias="has_children")] = False,
     transaction_type: Annotated[
         str | None, Query(alias="type", pattern="^(expense|income)$")
@@ -676,7 +677,9 @@ async def list_transactions(  # ruff: ignore[too-many-arguments, too-many-positi
 
     query = select(Transaction).where(Transaction.wallet_id == wallet_id)
 
-    if not include_children:
+    if only_children:
+        query = query.where(col(Transaction.group_id).is_not(None))
+    elif not include_children:
         query = query.where(col(Transaction.group_id).is_(None))
 
     if transaction_type is not None:

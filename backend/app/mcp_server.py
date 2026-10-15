@@ -613,6 +613,7 @@ class ListTransactionsInput:
     sort_by: str = "date"
     sort_order: str = "desc"
     include_children: bool = False
+    only_children: bool = False
 
 
 def _apply_date_filters(
@@ -649,7 +650,9 @@ async def _fetch_transactions(  # ruff: ignore[too-many-return-statements, too-m
             return "Wallet not found"
 
         query = select(Transaction).where(Transaction.wallet_id == w_id)
-        if not params.include_children:
+        if params.only_children:
+            query = query.where(col(Transaction.group_id).is_not(None))
+        elif not params.include_children:
             query = query.where(col(Transaction.group_id).is_(None))
         query, err = _apply_date_filters(query, params.start_date, params.end_date)
         if err:
@@ -722,8 +725,8 @@ async def list_transactions(params: ListTransactionsInput) -> dict[str, Any]:
 
     By default only top-level transactions are returned; sub-transactions inside a group
     are hidden. Set include_children to also return sub-transactions as their own rows, so
-    filters like category_id or search match them. A sub-transaction's "group_id" is the
-    id of its parent.
+    filters like category_id or search match them, or only_children to return nothing but
+    sub-transactions. A sub-transaction's "group_id" is the id of its parent.
 
     Args:
         params.wallet_id: UUID of the wallet to query.
@@ -740,6 +743,7 @@ async def list_transactions(params: ListTransactionsInput) -> dict[str, Any]:
         params.sort_by: Sort field: "date" (default) or "amount".
         params.sort_order: Sort direction: "desc" (default) or "asc".
         params.include_children: Also return sub-transactions of groups (default false).
+        params.only_children: Return only sub-transactions of groups (default false).
     """
     user = await _get_authenticated_user()
     result = await _fetch_transactions(params, user.id)
