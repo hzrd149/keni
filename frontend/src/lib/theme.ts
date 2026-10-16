@@ -8,8 +8,8 @@ const listeners = new Set<() => void>();
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 
 // Android paints the status bar from <meta name="theme-color">.
-// Values are --surface per theme, matching the mobile header + tab bar background.
-const THEME_COLORS: Record<Theme, string> = { light: '#FFFFFF', dark: '#1B1611' };
+// Values are --cream per theme, matching the mobile header + tab bar background.
+const THEME_COLORS: Record<Theme, string> = { light: '#F9F5EC', dark: '#120D09' };
 
 function readStored(): ThemePreference {
   try {
