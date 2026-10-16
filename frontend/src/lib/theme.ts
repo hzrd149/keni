@@ -7,6 +7,10 @@ const STORAGE_KEY = 'keni-theme';
 const listeners = new Set<() => void>();
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
 
+// Android paints the status/navigation bars from <meta name="theme-color">.
+// Values are --cream per theme, matching the mobile header + tab bar background.
+const THEME_COLORS: Record<Theme, string> = { light: '#F9F5EC', dark: '#120D09' };
+
 function readStored(): ThemePreference {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
@@ -27,6 +31,7 @@ function resolve(): Theme {
 function apply() {
   current = resolve();
   document.documentElement.dataset.theme = current;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[current]);
   listeners.forEach((l) => l());
 }
 
