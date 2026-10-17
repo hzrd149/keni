@@ -924,10 +924,10 @@ export function WalletViewPage() {
               value={hasChildrenFilter ? 'has' : includeChildren ? 'include' : onlyChildren ? 'only' : ''}
               onChange={(v) => setParam({ has_children: v === 'has' ? '1' : null, include_children: v === 'include' ? '1' : null, only_children: v === 'only' ? '1' : null, page: null })}
               options={[
-                { value: '', label: t('walletView.filterTypeAll') },
-                { value: 'has', label: t('walletView.filterHasSubTransactions') },
+                { value: '', label: t('walletView.filterHideSubTransactions') },
                 { value: 'include', label: t('walletView.filterIncludeSubTransactions') },
                 { value: 'only', label: t('walletView.filterOnlySubTransactions') },
+                { value: 'has', label: t('walletView.filterHasSubTransactions') },
               ]}
             />
           </div>
