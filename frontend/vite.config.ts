@@ -39,7 +39,7 @@ export default defineConfig({
         // in both themes. Status bar color comes from the theme-color meta (lib/theme.ts).
         theme_color: undefined,
         background_color: '#F9F5EC',
-        display: 'fullscreen',
+        display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
