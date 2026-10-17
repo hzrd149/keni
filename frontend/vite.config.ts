@@ -35,8 +35,8 @@ export default defineConfig({
         name: 'Keni',
         short_name: 'Keni',
         description: 'A personal finance tracker built for people who want clarity without complexity.',
-        // Unset (overrides plugin default) so Android's nav bar follows the phone's light/dark
-        // theme; a manifest theme_color would pin it to one color in both modes.
+        // Unset (overrides plugin default): Android would paint the nav bar with it, one color
+        // in both themes. Status bar color comes from the theme-color meta (lib/theme.ts).
         theme_color: undefined,
         background_color: '#F9F5EC',
         display: 'standalone',
