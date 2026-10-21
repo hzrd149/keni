@@ -2,7 +2,8 @@ name: Docker - Backend
 
 on:
   push:
-    branches: [ "main" ]
+    # Every branch gets an image tagged with its (sanitized) name, e.g. feat-foo.
+    branches: [ "**" ]
     tags: [ "v*.*.*" ]
     paths:
       - "backend/**"
