@@ -1,6 +1,7 @@
 import { LayoutDashboard, Zap, RefreshCw, Tag, Bot, Settings } from 'lucide-react';
 import type { AIExpenseResponse, AIRecurringResponse } from '../../lib/types';
 import { localDateStr } from '../../lib/utils';
+import { randomUUID } from '../../lib/uuid';
 import type { EditableExpense, EditableRecurring } from './types';
 
 export const NAV_ITEMS_STATIC = [
@@ -19,7 +20,7 @@ export function looksLikeExpense(text: string): boolean {
 export function makeEditable(exp: AIExpenseResponse): EditableExpense {
   return {
     ...exp,
-    _id: crypto.randomUUID(),
+    _id: randomUUID(),
     _editAmount: exp.amount != null ? String(exp.amount) : '',
     _editCategory: exp.category_name ?? '',
     _editDescription: exp.description ?? '',
